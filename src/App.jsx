@@ -30,7 +30,18 @@ const THEMES = [
   { key: "sunset", label: "Sunset Bloom", swatch: ["#C6491F", "#E8A33D", "#8E3B5D"] },
   { key: "orchid", label: "Orchid Luxe", swatch: ["#6B3F76", "#D9A441", "#B75C7A"] },
 ];
-const THEME_STORAGE_KEY = "nutriplan-theme";
+const THEME_STORAGE_KEY = "nutrifly-theme";
+
+// Same hex values as the CSS custom properties for each theme, converted to
+// RGB triples for jsPDF (which can't read CSS variables). Keeping these in
+// sync with the CSS above means the downloaded PDF always matches whichever
+// theme is active on screen.
+const THEME_PDF_COLORS = {
+  sage: { leaf: [47, 82, 51], citrus: [214, 88, 31], berry: [140, 47, 73] },
+  ocean: { leaf: [14, 110, 112], citrus: [217, 138, 43], berry: [27, 75, 107] },
+  sunset: { leaf: [142, 59, 93], citrus: [198, 73, 31], berry: [110, 37, 64] },
+  orchid: { leaf: [107, 63, 118], citrus: [217, 164, 65], berry: [183, 92, 122] },
+};
 
 function ThemeSwitcher({ theme, setTheme }) {
   const [open, setOpen] = useState(false);
@@ -128,36 +139,54 @@ const MEAL_DB = {
       { name: "Moong Dal Chilla (2 pcs)", qty: "2 pieces + mint chutney", cal: 260, p: 14, c: 28, f: 8, fiber: 6, alt: "Besan Chilla", reason: "Lentil-based batter gives a protein head-start rarely found in typical breakfasts." },
       { name: "Vegetable Upma with Peanuts", qty: "1.5 cups (220g)", cal: 290, p: 8, c: 46, f: 9, fiber: 5, alt: "Vegetable Poha", reason: "Semolina provides sustained energy; vegetables add fibre and micronutrients." },
       { name: "Paneer Bhurji with Multigrain Toast", qty: "100g paneer + 2 slices", cal: 340, p: 20, c: 30, f: 15, fiber: 4, alt: "Sprouts Bhurji", reason: "Paneer delivers a strong protein base to reduce mid-morning hunger." },
+      { name: "Idli with Sambar & Chutney", qty: "4 idlis + 1 cup sambar", cal: 280, p: 10, c: 50, f: 5, fiber: 6, alt: "Vegetable Upma with Peanuts", reason: "Steamed, fermented batter is gentle on digestion; sambar lentils add plant protein." },
+      { name: "Stuffed Aloo Paratha with Curd", qty: "1 large paratha + 100g curd", cal: 340, p: 10, c: 46, f: 13, fiber: 4, alt: "Vegetable Poha", reason: "A hearty classic; curd's probiotics and protein balance the ghee-cooked paratha." },
+      { name: "Vegetable Daliya (Broken Wheat Porridge)", qty: "1.5 cups (220g)", cal: 260, p: 8, c: 46, f: 5, fiber: 7, alt: "Moong Dal Chilla (2 pcs)", reason: "Broken wheat is high in fibre and simmers into a light, filling porridge." },
     ],
     midMorning: [
       { name: "Mixed Fruit Bowl", qty: "1 cup (150g)", cal: 90, p: 1, c: 22, f: 0, fiber: 4, alt: "Buttermilk (1 glass)", reason: "Natural sugars and fibre curb cravings without a calorie spike." },
       { name: "Roasted Chana", qty: "30g", cal: 130, p: 7, c: 18, f: 3, fiber: 6, alt: "Handful of almonds (10)", reason: "Crunchy, protein-rich snack that keeps blood sugar stable." },
       { name: "Buttermilk (Spiced)", qty: "1 glass (250ml)", cal: 60, p: 3, c: 6, f: 2, fiber: 0, alt: "Coconut Water", reason: "Probiotic and hydrating; supports digestion between meals." },
       { name: "Sprouts Chaat", qty: "1 cup (100g)", cal: 110, p: 7, c: 16, f: 2, fiber: 5, alt: "Mixed Fruit Bowl", reason: "Sprouting increases protein bioavailability and fibre content." },
+      { name: "Coconut Water", qty: "1 glass (250ml)", cal: 60, p: 1, c: 14, f: 0, fiber: 1, alt: "Buttermilk (Spiced)", reason: "Natural electrolytes make this a refreshing, low-calorie hydration break." },
+      { name: "Handful of Almonds (10)", qty: "10 almonds (12g)", cal: 80, p: 3, c: 3, f: 7, fiber: 2, alt: "Roasted Chana", reason: "Healthy fats and a touch of protein help bridge the gap to lunch." },
+      { name: "Cucumber & Carrot Sticks with Hummus", qty: "1 cup veg + 2 tbsp hummus", cal: 100, p: 4, c: 10, f: 5, fiber: 3, alt: "Sprouts Chaat", reason: "Crunchy fibre-rich vegetables paired with a protein-rich dip curb cravings." },
     ],
     lunch: [
       { name: "Dal, 2 Roti, Sabzi, Salad", qty: "1 cup dal + 2 roti + 1 cup sabzi", cal: 520, p: 20, c: 78, f: 12, fiber: 12, alt: "Rajma Chawal", reason: "Balanced thali covering complex carbs, plant protein, and fibre in one plate." },
       { name: "Rajma Chawal with Salad", qty: "1 cup rajma + 1 cup rice", cal: 540, p: 18, c: 88, f: 8, fiber: 14, alt: "Chole with Roti", reason: "Kidney beans are rich in fibre and protein, ideal for satiety." },
       { name: "Paneer Curry, 2 Roti, Salad", qty: "120g paneer + 2 roti", cal: 560, p: 26, c: 60, f: 20, fiber: 8, alt: "Soya Chunk Curry with Rice", reason: "Higher protein lunch option that supports muscle maintenance." },
       { name: "Vegetable Khichdi with Curd", qty: "2 cups + 1 cup curd", cal: 500, p: 16, c: 76, f: 10, fiber: 9, alt: "Dal Roti Sabzi", reason: "Easy to digest, balanced one-pot meal with probiotic curd on the side." },
+      { name: "Chole with Brown Rice & Salad", qty: "1 cup chole + 1 cup brown rice", cal: 550, p: 18, c: 92, f: 9, fiber: 14, alt: "Rajma Chawal with Salad", reason: "Chickpeas bring fibre and protein; brown rice slows the glycemic response." },
+      { name: "Palak Paneer, 2 Roti, Salad", qty: "150g paneer curry + 2 roti", cal: 570, p: 24, c: 58, f: 22, fiber: 8, alt: "Paneer Curry, 2 Roti, Salad", reason: "Iron-rich spinach paired with paneer's protein makes a nourishing main meal." },
+      { name: "Soya Chunk Curry with Rice & Salad", qty: "1 cup soya + 1 cup rice", cal: 530, p: 26, c: 76, f: 9, fiber: 11, alt: "Vegetable Khichdi with Curd", reason: "Soya chunks are one of the densest plant-protein sources for a filling lunch." },
     ],
     eveningSnack: [
       { name: "Roasted Makhana", qty: "1 cup (30g)", cal: 110, p: 3, c: 18, f: 3, fiber: 3, alt: "Vegetable Soup", reason: "Low-calorie crunchy snack that satisfies without derailing calories." },
       { name: "Vegetable Soup", qty: "1 bowl (250ml)", cal: 90, p: 3, c: 12, f: 3, fiber: 3, alt: "Roasted Makhana", reason: "Warm, filling, and hydrating with minimal calories." },
       { name: "Green Tea + 4 Almonds", qty: "1 cup + 4 almonds", cal: 80, p: 2, c: 4, f: 6, fiber: 1, alt: "Roasted Chana", reason: "Antioxidants from tea paired with healthy fats from almonds." },
       { name: "Sprouts Salad", qty: "1 cup (100g)", cal: 110, p: 7, c: 16, f: 2, fiber: 5, alt: "Roasted Makhana", reason: "Keeps protein trickling in before dinner to reduce overeating." },
+      { name: "Corn Chaat", qty: "1 cup (120g)", cal: 130, p: 4, c: 22, f: 3, fiber: 4, alt: "Sprouts Salad", reason: "Fibre-rich corn kernels tossed with lemon and spices make a light, tangy bite." },
+      { name: "Buttermilk (Spiced)", qty: "1 glass (250ml)", cal: 60, p: 3, c: 6, f: 2, fiber: 0, alt: "Vegetable Soup", reason: "A cooling, probiotic-rich sip that keeps calories in check before dinner." },
+      { name: "Roasted Peanuts (Light)", qty: "20g", cal: 115, p: 5, c: 4, f: 9, fiber: 2, alt: "Roasted Makhana", reason: "A small handful of peanuts adds healthy fat and protein without much bulk." },
     ],
     dinner: [
       { name: "Dal, 1 Roti, Sabzi", qty: "1 cup dal + 1 roti + 1 cup sabzi", cal: 420, p: 18, c: 55, f: 10, fiber: 11, alt: "Vegetable Khichdi", reason: "Lighter than lunch to support digestion before sleep." },
       { name: "Paneer Tikka with Salad", qty: "150g paneer + salad", cal: 400, p: 26, c: 20, f: 22, fiber: 6, alt: "Grilled Soya Tikka", reason: "Low-carb, high-protein dinner supports overnight recovery." },
       { name: "Vegetable Soup with Multigrain Toast", qty: "1 bowl + 2 slices", cal: 320, p: 10, c: 46, f: 8, fiber: 6, alt: "Dal Roti Sabzi", reason: "Light and easily digestible option for a calmer night's sleep." },
       { name: "Stir-Fried Tofu & Vegetables", qty: "150g tofu + 1 cup veg", cal: 380, p: 22, c: 24, f: 20, fiber: 8, alt: "Paneer Tikka with Salad", reason: "Plant protein with minimal oil keeps the evening meal light yet filling." },
+      { name: "Palak Dal with 1 Roti", qty: "1 cup dal + 1 roti", cal: 380, p: 17, c: 48, f: 10, fiber: 10, alt: "Dal, 1 Roti, Sabzi", reason: "Spinach-lentil combination is iron-rich and light enough for a calm night's sleep." },
+      { name: "Grilled Paneer & Vegetable Skewers", qty: "150g paneer + veg", cal: 380, p: 24, c: 18, f: 22, fiber: 6, alt: "Paneer Tikka with Salad", reason: "Minimal oil, high protein — supports overnight muscle recovery." },
+      { name: "Mixed Vegetable Curry with 1 Roti", qty: "1.5 cups veg + 1 roti", cal: 340, p: 10, c: 48, f: 10, fiber: 9, alt: "Vegetable Soup with Multigrain Toast", reason: "A lighter vegetable-forward plate that's easy on digestion before bed." },
     ],
     beforeBed: [
       { name: "Warm Turmeric Milk", qty: "1 glass (200ml)", cal: 120, p: 6, c: 12, f: 5, fiber: 0, alt: "Chamomile Tea", reason: "Traditionally supports relaxation and recovery overnight." },
       { name: "A Handful of Walnuts (5)", qty: "5 halves (15g)", cal: 100, p: 2, c: 2, f: 10, fiber: 1, alt: "Warm Turmeric Milk", reason: "Omega-3 fats in small quantity without disturbing sleep digestion." },
       { name: "Chamomile Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Warm Turmeric Milk", reason: "Caffeine-free, calming beverage to wind down the day." },
       { name: "Roasted Fox Nuts (Light)", qty: "15g", cal: 60, p: 2, c: 9, f: 2, fiber: 2, alt: "A Handful of Walnuts", reason: "Light bite that won't spike blood sugar before bedtime." },
+      { name: "Warm Milk with Saffron", qty: "1 glass (200ml)", cal: 130, p: 7, c: 11, f: 6, fiber: 0, alt: "Warm Turmeric Milk", reason: "A traditional, calming drink that rounds off the day gently." },
+      { name: "A Few Soaked Almonds (5)", qty: "5 almonds (6g)", cal: 40, p: 1, c: 1, f: 4, fiber: 1, alt: "A Handful of Walnuts (5)", reason: "Soaking makes almonds easier to digest — a small dose of healthy fat before sleep." },
+      { name: "Herbal Tulsi Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Chamomile Tea", reason: "Naturally caffeine-free and traditionally used to unwind in the evening." },
     ],
   },
   nonVegetarian: {
@@ -166,36 +195,54 @@ const MEAL_DB = {
       { name: "Boiled Eggs with Oats Upma", qty: "2 eggs + 1 cup oats", cal: 360, p: 22, c: 38, f: 12, fiber: 6, alt: "Egg Bhurji with Toast", reason: "Combines fast protein with slow-release carbs from oats." },
       { name: "Chicken Sausage & Vegetable Sauté", qty: "2 sausages + veg", cal: 340, p: 22, c: 18, f: 18, fiber: 3, alt: "Egg Omelette with Toast", reason: "Lean protein forward breakfast to support satiety till lunch." },
       { name: "Vegetable Poha with Boiled Egg", qty: "1.5 cups + 1 egg", cal: 330, p: 14, c: 46, f: 9, fiber: 5, alt: "Egg Bhurji with Toast", reason: "Balances familiar comfort food with an added protein boost." },
+      { name: "Grilled Chicken & Vegetable Wrap", qty: "1 wrap (150g filling)", cal: 360, p: 28, c: 34, f: 12, fiber: 4, alt: "Chicken Sausage & Vegetable Sauté", reason: "Portable, protein-forward breakfast that travels well on busy mornings." },
+      { name: "Masala Omelette with Multigrain Toast", qty: "2 eggs + 2 slices", cal: 340, p: 20, c: 28, f: 16, fiber: 4, alt: "Egg Bhurji with Multigrain Toast", reason: "Spiced eggs plus whole grain toast give quick energy and complete protein." },
+      { name: "Smoked Fish with Boiled Eggs", qty: "80g fish + 1 egg", cal: 300, p: 28, c: 6, f: 18, fiber: 1, alt: "Boiled Eggs with Oats Upma", reason: "Omega-3s from fish paired with egg protein make a lean, savoury start." },
     ],
     midMorning: [
       { name: "Buttermilk (Spiced)", qty: "1 glass (250ml)", cal: 60, p: 3, c: 6, f: 2, fiber: 0, alt: "Mixed Fruit Bowl", reason: "Light, probiotic-rich, and hydrating between meals." },
       { name: "Roasted Chana", qty: "30g", cal: 130, p: 7, c: 18, f: 3, fiber: 6, alt: "Boiled Egg (1)", reason: "Fibre-protein combo keeps hunger away without heaviness." },
       { name: "Boiled Egg (1)", qty: "1 egg", cal: 78, p: 6, c: 1, f: 5, fiber: 0, alt: "Roasted Chana", reason: "Quick portable protein snack for busy mornings." },
       { name: "Mixed Fruit Bowl", qty: "1 cup (150g)", cal: 90, p: 1, c: 22, f: 0, fiber: 4, alt: "Buttermilk", reason: "Natural vitamins and fibre for a refreshing mid-morning lift." },
+      { name: "Grilled Chicken Strips (Small)", qty: "40g", cal: 90, p: 15, c: 0, f: 3, fiber: 0, alt: "Boiled Egg (1)", reason: "A lean, portable protein snack that keeps hunger at bay." },
+      { name: "Coconut Water", qty: "1 glass (250ml)", cal: 60, p: 1, c: 14, f: 0, fiber: 1, alt: "Buttermilk (Spiced)", reason: "Natural electrolytes for a light, hydrating mid-morning break." },
+      { name: "Handful of Almonds (10)", qty: "10 almonds (12g)", cal: 80, p: 3, c: 3, f: 7, fiber: 2, alt: "Roasted Chana", reason: "Healthy fats bridge the gap to lunch without heaviness." },
     ],
     lunch: [
       { name: "Grilled Chicken, 2 Roti, Salad", qty: "150g chicken + 2 roti", cal: 560, p: 40, c: 55, f: 15, fiber: 8, alt: "Fish Curry with Rice", reason: "Lean protein paired with complex carbs for sustained energy." },
       { name: "Fish Curry with Rice", qty: "150g fish + 1 cup rice", cal: 540, p: 32, c: 60, f: 16, fiber: 5, alt: "Chicken Curry with Roti", reason: "Omega-3 rich fish supports heart health alongside balanced carbs." },
       { name: "Chicken Curry, 1 Roti, Dal", qty: "150g chicken + 1 roti + dal", cal: 570, p: 38, c: 52, f: 18, fiber: 9, alt: "Grilled Chicken with Rice", reason: "Combines animal and plant protein for a fuller amino acid profile." },
       { name: "Egg Curry with Rice & Salad", qty: "2 eggs + 1 cup rice", cal: 520, p: 24, c: 62, f: 16, fiber: 6, alt: "Grilled Chicken, Roti, Salad", reason: "Budget-friendly protein option that's quick to prepare." },
+      { name: "Mutton Curry (Lean) with 1 Roti & Salad", qty: "120g mutton + 1 roti", cal: 560, p: 34, c: 42, f: 24, fiber: 6, alt: "Chicken Curry, 1 Roti, Dal", reason: "Iron-rich red meat in a controlled portion supports energy and recovery." },
+      { name: "Prawn Curry with Rice", qty: "150g prawns + 1 cup rice", cal: 520, p: 32, c: 58, f: 14, fiber: 4, alt: "Fish Curry with Rice", reason: "Prawns are lean and quick-cooking, delivering protein with minimal fat." },
+      { name: "Chicken Biryani (Light) with Raita", qty: "1.5 cups + raita", cal: 560, p: 30, c: 66, f: 16, fiber: 5, alt: "Grilled Chicken, 2 Roti, Salad", reason: "A flavourful one-pot option; raita's yoghurt adds protein and cooling relief." },
     ],
     eveningSnack: [
       { name: "Roasted Makhana", qty: "1 cup (30g)", cal: 110, p: 3, c: 18, f: 3, fiber: 3, alt: "Grilled Chicken Strips (50g)", reason: "Light crunchy snack that won't crowd out dinner appetite." },
       { name: "Grilled Chicken Strips", qty: "50g", cal: 110, p: 18, c: 0, f: 4, fiber: 0, alt: "Boiled Egg (1)", reason: "Extra lean protein to keep muscles fed through the evening." },
       { name: "Vegetable Soup", qty: "1 bowl (250ml)", cal: 90, p: 3, c: 12, f: 3, fiber: 3, alt: "Roasted Makhana", reason: "Warm and light, ideal before an evening workout or walk." },
       { name: "Green Tea + Boiled Egg", qty: "1 cup + 1 egg", cal: 130, p: 6, c: 1, f: 5, fiber: 0, alt: "Grilled Chicken Strips", reason: "Antioxidants plus a protein top-up before dinner." },
+      { name: "Tandoori Chicken Tikka (Small)", qty: "60g", cal: 120, p: 20, c: 2, f: 4, fiber: 0, alt: "Grilled Chicken Strips", reason: "Char-grilled and lean, this keeps the evening protein intake steady." },
+      { name: "Egg Salad Cup", qty: "1 boiled egg + veg", cal: 110, p: 8, c: 4, f: 7, fiber: 2, alt: "Green Tea + Boiled Egg", reason: "A small savoury bite that curbs hunger before dinner." },
+      { name: "Roasted Peanuts (Light)", qty: "20g", cal: 115, p: 5, c: 4, f: 9, fiber: 2, alt: "Roasted Makhana", reason: "Compact source of healthy fat and protein for a mid-evening lift." },
     ],
     dinner: [
       { name: "Grilled Fish with Steamed Vegetables", qty: "150g fish + 1 cup veg", cal: 380, p: 34, c: 18, f: 18, fiber: 6, alt: "Chicken Stir-Fry with Vegetables", reason: "Light, high-protein dinner that's easy on digestion overnight." },
       { name: "Chicken Stir-Fry with Vegetables", qty: "150g chicken + 1 cup veg", cal: 400, p: 36, c: 20, f: 16, fiber: 6, alt: "Grilled Fish with Vegetables", reason: "Minimal oil preparation keeps calories controlled at night." },
       { name: "Egg White Omelette with Salad", qty: "3 egg whites + salad", cal: 260, p: 22, c: 10, f: 10, fiber: 4, alt: "Grilled Fish with Vegetables", reason: "Very light option ideal on days with lower activity." },
       { name: "Dal, 1 Roti, Grilled Chicken", qty: "0.5 cup dal + 1 roti + 100g chicken", cal: 420, p: 32, c: 38, f: 14, fiber: 7, alt: "Chicken Stir-Fry", reason: "Combines plant and animal protein for a well-rounded dinner." },
+      { name: "Baked Fish with Greens", qty: "150g fish + salad", cal: 380, p: 34, c: 8, f: 22, fiber: 5, alt: "Grilled Fish with Steamed Vegetables", reason: "Rich in omega-3s, this light preparation is gentle on digestion at night." },
+      { name: "Hearty Chicken & Vegetable Soup", qty: "1 large bowl (350ml)", cal: 300, p: 26, c: 22, f: 10, fiber: 5, alt: "Chicken Stir-Fry with Vegetables", reason: "Warm and light, an easy-to-digest way to close out the day's protein needs." },
+      { name: "Prawn Stir-Fry with Vegetables", qty: "120g prawns + veg", cal: 340, p: 30, c: 16, f: 16, fiber: 5, alt: "Grilled Fish with Steamed Vegetables", reason: "Quick-cooked and lean, keeps the evening meal light yet satisfying." },
     ],
     beforeBed: [
       { name: "Warm Turmeric Milk", qty: "1 glass (200ml)", cal: 120, p: 6, c: 12, f: 5, fiber: 0, alt: "Chamomile Tea", reason: "Supports relaxation and gentle overnight recovery." },
       { name: "A Handful of Walnuts (5)", qty: "5 halves (15g)", cal: 100, p: 2, c: 2, f: 10, fiber: 1, alt: "Warm Turmeric Milk", reason: "Small dose of omega-3 fats before sleep." },
       { name: "Chamomile Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Warm Turmeric Milk", reason: "Caffeine-free way to wind the day down." },
       { name: "Boiled Egg White (1)", qty: "1 egg white", cal: 17, p: 4, c: 0, f: 0, fiber: 0, alt: "A Handful of Walnuts", reason: "Minimal-calorie protein top-up for overnight muscle repair." },
+      { name: "Warm Milk with Saffron", qty: "1 glass (200ml)", cal: 130, p: 7, c: 11, f: 6, fiber: 0, alt: "Warm Turmeric Milk", reason: "A gentle, traditional drink to wind the day down." },
+      { name: "A Few Soaked Almonds (5)", qty: "5 almonds (6g)", cal: 40, p: 1, c: 1, f: 4, fiber: 1, alt: "A Handful of Walnuts (5)", reason: "Easy-to-digest healthy fats in a small overnight dose." },
+      { name: "Herbal Tulsi Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Chamomile Tea", reason: "Caffeine-free and calming, a light way to end the evening." },
     ],
   },
   vegan: {
@@ -204,36 +251,54 @@ const MEAL_DB = {
       { name: "Chickpea Flour Chilla (2 pcs)", qty: "2 pieces + chutney", cal: 250, p: 12, c: 28, f: 7, fiber: 6, alt: "Moong Dal Chilla", reason: "Besan is naturally vegan and rich in plant protein and fibre." },
       { name: "Overnight Oats with Almond Milk & Fruit", qty: "1 cup", cal: 300, p: 8, c: 50, f: 8, fiber: 7, alt: "Chickpea Flour Chilla", reason: "No prep needed the morning of; fibre-rich and naturally sweetened." },
       { name: "Tofu Bhurji with Multigrain Toast", qty: "100g tofu + 2 slices", cal: 320, p: 18, c: 30, f: 14, fiber: 5, alt: "Chickpea Flour Chilla", reason: "Tofu mimics egg bhurji texture while keeping the meal fully plant-based." },
+      { name: "Idli with Sambar (Ghee-Free)", qty: "4 idlis + 1 cup sambar", cal: 270, p: 10, c: 50, f: 4, fiber: 6, alt: "Chickpea Flour Chilla (2 pcs)", reason: "Naturally vegan, fermented, and gentle on digestion with lentil-based sambar." },
+      { name: "Vegetable Daliya (Broken Wheat Porridge)", qty: "1.5 cups (220g)", cal: 250, p: 7, c: 46, f: 4, fiber: 7, alt: "Vegetable Poha (No Ghee)", reason: "A fibre-rich, oil-free porridge that keeps the morning light and filling." },
+      { name: "Peanut Butter Toast with Banana", qty: "2 slices + 1 tbsp PB + banana", cal: 320, p: 11, c: 48, f: 11, fiber: 6, alt: "Overnight Oats with Almond Milk & Fruit", reason: "Plant protein and potassium-rich banana make a quick, no-cook option." },
     ],
     midMorning: [
       { name: "Mixed Fruit Bowl", qty: "1 cup (150g)", cal: 90, p: 1, c: 22, f: 0, fiber: 4, alt: "Coconut Water", reason: "Natural sugars and fibre for a clean energy lift." },
       { name: "Roasted Chana", qty: "30g", cal: 130, p: 7, c: 18, f: 3, fiber: 6, alt: "Almonds (10)", reason: "Plant protein and fibre combination curbs mid-morning hunger." },
       { name: "Coconut Water", qty: "1 glass (250ml)", cal: 60, p: 1, c: 14, f: 0, fiber: 1, alt: "Mixed Fruit Bowl", reason: "Natural electrolytes for hydration between meals." },
       { name: "Sprouts Chaat", qty: "1 cup (100g)", cal: 110, p: 7, c: 16, f: 2, fiber: 5, alt: "Roasted Chana", reason: "Sprouting boosts protein and micronutrient availability." },
+      { name: "Almonds (10)", qty: "10 almonds (12g)", cal: 80, p: 3, c: 3, f: 7, fiber: 2, alt: "Roasted Chana", reason: "Healthy plant fats to steady energy through mid-morning." },
+      { name: "Cucumber & Carrot Sticks with Hummus", qty: "1 cup veg + 2 tbsp hummus", cal: 100, p: 4, c: 10, f: 5, fiber: 3, alt: "Sprouts Chaat", reason: "Crunchy fibre paired with chickpea-based protein curbs cravings naturally." },
+      { name: "Steamed Corn Chaat", qty: "1 cup (120g)", cal: 130, p: 4, c: 22, f: 3, fiber: 4, alt: "Mixed Fruit Bowl", reason: "Naturally sweet and fibre-rich, a light plant-based pick-me-up." },
     ],
     lunch: [
       { name: "Rajma Chawal with Salad", qty: "1 cup rajma + 1 cup rice", cal: 520, p: 18, c: 86, f: 6, fiber: 14, alt: "Chole with Brown Rice", reason: "Kidney beans supply plant protein and fibre for lasting satiety." },
       { name: "Chole with Brown Rice", qty: "1 cup chole + 1 cup rice", cal: 540, p: 17, c: 90, f: 8, fiber: 13, alt: "Rajma Chawal", reason: "Chickpeas add protein and fibre; brown rice slows digestion." },
       { name: "Tofu & Vegetable Curry with Roti", qty: "150g tofu + 2 roti", cal: 500, p: 24, c: 55, f: 16, fiber: 9, alt: "Soya Chunk Curry with Rice", reason: "Tofu provides a complete plant protein for the main meal." },
       { name: "Mixed Dal & Vegetable Khichdi", qty: "2 cups", cal: 480, p: 16, c: 78, f: 8, fiber: 10, alt: "Rajma Chawal", reason: "One-pot balanced meal, gentle on digestion, fully plant-based." },
+      { name: "Soya Chunk Curry with Brown Rice", qty: "1 cup soya + 1 cup rice", cal: 520, p: 27, c: 76, f: 8, fiber: 11, alt: "Tofu & Vegetable Curry with Roti", reason: "Soya chunks are among the most protein-dense plant foods available." },
+      { name: "Palak Chole with Roti", qty: "1 cup + 2 roti", cal: 540, p: 19, c: 72, f: 14, fiber: 13, alt: "Chole with Brown Rice", reason: "Iron-rich spinach combined with chickpeas for a nourishing, plant-based plate." },
+      { name: "Peanut & Vegetable Stir-Fry with Rice", qty: "1.5 cups + 1 cup rice", cal: 510, p: 17, c: 78, f: 14, fiber: 9, alt: "Mixed Dal & Vegetable Khichdi", reason: "Peanuts bring a satisfying crunch and healthy fat to a vegetable-forward plate." },
     ],
     eveningSnack: [
       { name: "Roasted Makhana", qty: "1 cup (30g)", cal: 110, p: 3, c: 18, f: 3, fiber: 3, alt: "Vegetable Soup", reason: "Light, crunchy, naturally vegan snack." },
       { name: "Hummus with Carrot Sticks", qty: "3 tbsp + veg sticks", cal: 150, p: 5, c: 14, f: 9, fiber: 4, alt: "Roasted Makhana", reason: "Chickpea-based dip adds protein and healthy fat to the snack." },
       { name: "Vegetable Soup", qty: "1 bowl (250ml)", cal: 90, p: 3, c: 12, f: 3, fiber: 3, alt: "Hummus with Carrot Sticks", reason: "Warm and light option to bridge lunch and dinner." },
       { name: "Trail Mix (Nuts & Raisins)", qty: "20g", cal: 110, p: 3, c: 10, f: 7, fiber: 2, alt: "Roasted Makhana", reason: "Compact energy with healthy fats for an active evening." },
+      { name: "Roasted Chana", qty: "30g", cal: 130, p: 7, c: 18, f: 3, fiber: 6, alt: "Trail Mix (Nuts & Raisins)", reason: "A crunchy, plant-protein snack that's naturally vegan." },
+      { name: "Coconut Water", qty: "1 glass (250ml)", cal: 60, p: 1, c: 14, f: 0, fiber: 1, alt: "Vegetable Soup", reason: "Light, hydrating, and naturally sweet before the evening meal." },
+      { name: "Spiced Peanut Chaat", qty: "1 cup (100g)", cal: 140, p: 6, c: 14, f: 8, fiber: 3, alt: "Hummus with Carrot Sticks", reason: "Tangy, spiced peanuts deliver protein and healthy fat in a small portion." },
     ],
     dinner: [
       { name: "Stir-Fried Tofu & Vegetables", qty: "150g tofu + 1 cup veg", cal: 360, p: 20, c: 22, f: 18, fiber: 8, alt: "Soya Chunk Curry with Vegetables", reason: "Light, high plant-protein dinner supports overnight recovery." },
       { name: "Soya Chunk Curry with Vegetables", qty: "1 cup soya + veg", cal: 380, p: 24, c: 30, f: 14, fiber: 9, alt: "Stir-Fried Tofu & Vegetables", reason: "Soya chunks are protein-dense, ideal for a plant-based dinner." },
       { name: "Vegetable & Lentil Soup with Toast", qty: "1 bowl + 2 slices", cal: 320, p: 12, c: 46, f: 7, fiber: 8, alt: "Stir-Fried Tofu & Vegetables", reason: "Warm, fibre-rich, and easy to digest before bed." },
       { name: "Chickpea & Spinach Curry with Roti", qty: "1 cup + 1 roti", cal: 400, p: 16, c: 50, f: 12, fiber: 10, alt: "Soya Chunk Curry", reason: "Iron-rich spinach paired with fibre-dense chickpeas." },
+      { name: "Grilled Tofu Skewers with Salad", qty: "150g tofu + salad", cal: 340, p: 20, c: 14, f: 22, fiber: 6, alt: "Stir-Fried Tofu & Vegetables", reason: "Minimal oil, high plant-protein dinner that's light on the stomach." },
+      { name: "Mixed Vegetable & Chickpea Curry with 1 Roti", qty: "1.5 cups + 1 roti", cal: 380, p: 14, c: 54, f: 10, fiber: 11, alt: "Chickpea & Spinach Curry with Roti", reason: "A fibre-dense, fully plant-based plate that's gentle before bedtime." },
+      { name: "Lentil Soup with Multigrain Toast", qty: "1 bowl + 2 slices", cal: 320, p: 14, c: 46, f: 7, fiber: 9, alt: "Vegetable & Lentil Soup with Toast", reason: "Warm and comforting, with plant protein to support overnight repair." },
     ],
     beforeBed: [
       { name: "Warm Almond Milk with Turmeric", qty: "1 glass (200ml)", cal: 90, p: 2, c: 8, f: 5, fiber: 1, alt: "Chamomile Tea", reason: "Dairy-free way to enjoy a calming, warm bedtime drink." },
       { name: "A Handful of Walnuts (5)", qty: "5 halves (15g)", cal: 100, p: 2, c: 2, f: 10, fiber: 1, alt: "Warm Almond Milk", reason: "Small plant-based omega-3 boost before sleep." },
       { name: "Chamomile Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Warm Almond Milk", reason: "Naturally caffeine-free and calming." },
       { name: "Roasted Fox Nuts (Light)", qty: "15g", cal: 60, p: 2, c: 9, f: 2, fiber: 2, alt: "A Handful of Walnuts", reason: "Light, low-sugar bite that won't disturb sleep." },
+      { name: "Warm Soy Milk with Cinnamon", qty: "1 glass (200ml)", cal: 100, p: 6, c: 9, f: 4, fiber: 1, alt: "Warm Almond Milk with Turmeric", reason: "A dairy-free, calming drink with a modest plant-protein boost." },
+      { name: "A Few Soaked Almonds (5)", qty: "5 almonds (6g)", cal: 40, p: 1, c: 1, f: 4, fiber: 1, alt: "A Handful of Walnuts (5)", reason: "Easy-to-digest healthy fats in a small overnight dose." },
+      { name: "Herbal Tulsi Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Chamomile Tea", reason: "Naturally caffeine-free, a gentle way to end the day." },
     ],
   },
   eggetarian: {
@@ -242,36 +307,54 @@ const MEAL_DB = {
       { name: "Vegetable Poha with Boiled Egg", qty: "1.5 cups + 1 egg", cal: 330, p: 14, c: 46, f: 9, fiber: 5, alt: "Egg Bhurji with Toast", reason: "Familiar comfort food upgraded with an added protein source." },
       { name: "Masala Omelette with Toast", qty: "2 eggs + 2 slices", cal: 340, p: 20, c: 28, f: 16, fiber: 4, alt: "Boiled Eggs with Oats Upma", reason: "Spiced, satisfying, and quick to prepare on busy mornings." },
       { name: "Boiled Eggs with Oats Upma", qty: "2 eggs + 1 cup oats", cal: 360, p: 22, c: 38, f: 12, fiber: 6, alt: "Egg Bhurji with Toast", reason: "Combines fast protein with slow-release oat carbohydrates." },
+      { name: "Idli with Sambar & Boiled Egg", qty: "3 idlis + sambar + 1 egg", cal: 320, p: 16, c: 52, f: 7, fiber: 6, alt: "Vegetable Poha with Boiled Egg", reason: "Fermented idli batter plus an egg rounds out protein for the morning." },
+      { name: "Egg & Vegetable Wrap", qty: "1 wrap (150g filling)", cal: 340, p: 18, c: 36, f: 13, fiber: 5, alt: "Masala Omelette with Toast", reason: "A portable option combining egg protein with fibre-rich vegetables." },
+      { name: "Stuffed Paratha with Boiled Egg & Curd", qty: "1 paratha + 1 egg + curd", cal: 370, p: 16, c: 44, f: 15, fiber: 4, alt: "Egg Bhurji with Multigrain Toast", reason: "A hearty combination that keeps energy steady through a busy morning." },
     ],
     midMorning: [
       { name: "Buttermilk (Spiced)", qty: "1 glass (250ml)", cal: 60, p: 3, c: 6, f: 2, fiber: 0, alt: "Mixed Fruit Bowl", reason: "Light and probiotic-rich between-meal refresher." },
       { name: "Boiled Egg (1)", qty: "1 egg", cal: 78, p: 6, c: 1, f: 5, fiber: 0, alt: "Roasted Chana", reason: "Portable protein snack for a steady energy level." },
       { name: "Roasted Chana", qty: "30g", cal: 130, p: 7, c: 18, f: 3, fiber: 6, alt: "Boiled Egg (1)", reason: "Fibre and plant protein combination to manage hunger." },
       { name: "Mixed Fruit Bowl", qty: "1 cup (150g)", cal: 90, p: 1, c: 22, f: 0, fiber: 4, alt: "Buttermilk", reason: "Vitamin-rich, naturally sweet mid-morning pick-me-up." },
+      { name: "Coconut Water", qty: "1 glass (250ml)", cal: 60, p: 1, c: 14, f: 0, fiber: 1, alt: "Buttermilk (Spiced)", reason: "Natural electrolytes for a light, refreshing break between meals." },
+      { name: "Handful of Almonds (10)", qty: "10 almonds (12g)", cal: 80, p: 3, c: 3, f: 7, fiber: 2, alt: "Roasted Chana", reason: "A small dose of healthy fat and protein to steady energy." },
+      { name: "Sprouts Chaat", qty: "1 cup (100g)", cal: 110, p: 7, c: 16, f: 2, fiber: 5, alt: "Mixed Fruit Bowl", reason: "Sprouting boosts protein and micronutrient availability naturally." },
     ],
     lunch: [
       { name: "Egg Curry with Rice & Salad", qty: "2 eggs + 1 cup rice", cal: 520, p: 24, c: 62, f: 16, fiber: 6, alt: "Rajma Chawal", reason: "Protein-rich curry paired with balanced carbohydrates." },
       { name: "Dal, 2 Roti, Sabzi, Boiled Egg", qty: "1 cup dal + 2 roti + 1 egg", cal: 560, p: 24, c: 78, f: 14, fiber: 12, alt: "Egg Curry with Rice", reason: "Classic thali with an added egg for extra protein." },
       { name: "Rajma Chawal with Boiled Egg", qty: "1 cup rajma + rice + 1 egg", cal: 560, p: 22, c: 86, f: 10, fiber: 14, alt: "Dal Roti Sabzi with Egg", reason: "Combines plant and egg protein with high fibre content." },
       { name: "Egg Fried Rice with Vegetables", qty: "1.5 cups + 2 eggs", cal: 540, p: 22, c: 70, f: 16, fiber: 6, alt: "Egg Curry with Rice", reason: "A flavourful way to include vegetables and protein together." },
+      { name: "Paneer & Egg Bhurji with 2 Roti", qty: "80g paneer + 1 egg + 2 roti", cal: 560, p: 26, c: 58, f: 22, fiber: 7, alt: "Egg Curry with Rice & Salad", reason: "Combining paneer and egg gives a strong dual-protein lunch." },
+      { name: "Chole with Boiled Egg & Rice", qty: "1 cup chole + 1 egg + rice", cal: 560, p: 22, c: 82, f: 14, fiber: 13, alt: "Rajma Chawal with Boiled Egg", reason: "Plant and egg protein together with fibre-rich chickpeas for lasting satiety." },
+      { name: "Vegetable Khichdi with Boiled Egg & Curd", qty: "2 cups + 1 egg + curd", cal: 540, p: 20, c: 72, f: 16, fiber: 9, alt: "Egg Fried Rice with Vegetables", reason: "An easy-to-digest one-pot meal topped with a protein-rich egg." },
     ],
     eveningSnack: [
       { name: "Roasted Makhana", qty: "1 cup (30g)", cal: 110, p: 3, c: 18, f: 3, fiber: 3, alt: "Boiled Egg (1)", reason: "Light, crunchy snack that fits neatly before dinner." },
       { name: "Boiled Egg (1)", qty: "1 egg", cal: 78, p: 6, c: 1, f: 5, fiber: 0, alt: "Roasted Makhana", reason: "Small protein top-up to curb evening hunger." },
       { name: "Vegetable Soup", qty: "1 bowl (250ml)", cal: 90, p: 3, c: 12, f: 3, fiber: 3, alt: "Roasted Makhana", reason: "Warm and light, ideal before an evening walk." },
       { name: "Green Tea + Roasted Chana", qty: "1 cup + 20g", cal: 100, p: 5, c: 12, f: 2, fiber: 4, alt: "Boiled Egg (1)", reason: "Antioxidants paired with a light plant-protein bite." },
+      { name: "Egg Salad Cup", qty: "1 boiled egg + veg", cal: 110, p: 8, c: 4, f: 7, fiber: 2, alt: "Boiled Egg (1)", reason: "A small savoury bite that keeps protein steady before dinner." },
+      { name: "Sprouts Salad", qty: "1 cup (100g)", cal: 110, p: 7, c: 16, f: 2, fiber: 5, alt: "Roasted Makhana", reason: "Light, crunchy, and protein-rich thanks to sprouted lentils." },
+      { name: "Roasted Peanuts (Light)", qty: "20g", cal: 115, p: 5, c: 4, f: 9, fiber: 2, alt: "Green Tea + Roasted Chana", reason: "Compact source of healthy fat to bridge the gap to dinner." },
     ],
     dinner: [
       { name: "Egg White Omelette with Salad", qty: "3 egg whites + salad", cal: 260, p: 22, c: 10, f: 10, fiber: 4, alt: "Dal, 1 Roti, Sabzi", reason: "Very light, high-protein option ideal for the evening." },
       { name: "Dal, 1 Roti, Sabzi", qty: "1 cup dal + 1 roti + 1 cup sabzi", cal: 420, p: 18, c: 55, f: 10, fiber: 11, alt: "Egg White Omelette with Salad", reason: "Balanced, lighter-than-lunch meal to ease digestion overnight." },
       { name: "Egg Curry (Light) with Roti", qty: "2 eggs + 1 roti", cal: 400, p: 22, c: 34, f: 16, fiber: 6, alt: "Egg White Omelette", reason: "Moderate portion keeps protein high without overloading calories." },
       { name: "Vegetable Soup with Boiled Egg", qty: "1 bowl + 1 egg", cal: 260, p: 12, c: 22, f: 10, fiber: 5, alt: "Dal Roti Sabzi", reason: "Warm and light, with a protein boost from the egg." },
+      { name: "Paneer Tikka with Boiled Egg & Salad", qty: "100g paneer + 1 egg", cal: 380, p: 26, c: 16, f: 22, fiber: 5, alt: "Egg Curry (Light) with Roti", reason: "High-protein, low-carb dinner that supports overnight recovery." },
+      { name: "Mixed Vegetable Curry, 1 Roti & Boiled Egg", qty: "1 cup veg + 1 roti + 1 egg", cal: 400, p: 18, c: 46, f: 14, fiber: 9, alt: "Dal, 1 Roti, Sabzi", reason: "A balanced, lighter-than-lunch plate rounded off with egg protein." },
+      { name: "Egg Drop Vegetable Soup", qty: "1 large bowl (350ml)", cal: 240, p: 14, c: 18, f: 11, fiber: 4, alt: "Vegetable Soup with Boiled Egg", reason: "Warm, light, and easy to digest — gentle on the stomach before bed." },
     ],
     beforeBed: [
       { name: "Warm Turmeric Milk", qty: "1 glass (200ml)", cal: 120, p: 6, c: 12, f: 5, fiber: 0, alt: "Chamomile Tea", reason: "Supports relaxation and gentle overnight recovery." },
       { name: "A Handful of Walnuts (5)", qty: "5 halves (15g)", cal: 100, p: 2, c: 2, f: 10, fiber: 1, alt: "Warm Turmeric Milk", reason: "Small omega-3 boost before sleep." },
       { name: "Chamomile Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Warm Turmeric Milk", reason: "Caffeine-free way to wind down." },
       { name: "Boiled Egg White (1)", qty: "1 egg white", cal: 17, p: 4, c: 0, f: 0, fiber: 0, alt: "A Handful of Walnuts", reason: "Minimal-calorie protein top-up for overnight repair." },
+      { name: "Warm Milk with Saffron", qty: "1 glass (200ml)", cal: 130, p: 7, c: 11, f: 6, fiber: 0, alt: "Warm Turmeric Milk", reason: "A gentle, traditional drink that rounds off the day." },
+      { name: "A Few Soaked Almonds (5)", qty: "5 almonds (6g)", cal: 40, p: 1, c: 1, f: 4, fiber: 1, alt: "A Handful of Walnuts (5)", reason: "Easy-to-digest healthy fats in a small overnight dose." },
+      { name: "Herbal Tulsi Tea", qty: "1 cup", cal: 5, p: 0, c: 1, f: 0, fiber: 0, alt: "Chamomile Tea", reason: "Naturally caffeine-free, a calming way to end the evening." },
     ],
   },
 };
@@ -286,9 +369,9 @@ const ACTIVITY_LABEL = {
 
 const CONDITION_TIPS = {
   Diabetes: "Favour low glycemic-index foods, avoid sugary drinks, and space carbohydrates evenly through the day.",
-  Thyroid: "Include iodine and selenium-rich foods; keep meal timing consistent to support metabolism.",
+  Thyroid: "Include iodine and selenium rich foods; keep meal timing consistent to support metabolism.",
   "High Blood Pressure": "Limit added salt and processed foods; prioritise potassium-rich vegetables and fruits.",
-  Cholesterol: "Choose healthy unsaturated fats, increase soluble fibre, and limit deep-fried foods.",
+  Cholesterol: "Choose healthy unsaturated fats, increase soluble fibre, and limit deep fried foods.",
   PCOS: "Prioritise fibre and protein at each meal to support insulin sensitivity; limit refined sugar.",
   "Heart Disease": "Reduce saturated fat and sodium; emphasise omega-3 sources and whole grains.",
 };
@@ -299,7 +382,7 @@ const SMART_TIPS_BASE = [
   { icon: Moon, text: "Target 7–8 hours of quality sleep to support recovery and appetite control." },
   { icon: Salad, text: "Fill half your plate with vegetables at lunch and dinner." },
   { icon: X, text: "Limit sugary drinks and packaged fruit juices." },
-  { icon: X, text: "Cut back on deep-fried and heavily processed snacks." },
+  { icon: X, text: "Cut back on deep fried and heavily processed snacks." },
 ];
 
 const MARQUEE_WORDS = [
@@ -362,17 +445,43 @@ function formatHeight(form) {
   return `${form.heightFt}'${form.heightIn || 0}"`;
 }
 
-function generateDayMeals(form, dayIndex) {
+function hashString(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// Every slot in MEAL_DB now has exactly 7 options — one for each day of the
+// week. Rotating through them with `(dayIndex + offset) % 7` is a cyclic
+// bijection: every day gets a different index for that slot, so no meal
+// (breakfast, lunch, dinner, etc.) is ever repeated within the same week.
+// Each slot gets its own offset purely so a single day doesn't line up on
+// the same variant number for every meal (e.g. "everything is option #1").
+const SLOT_OFFSET = { breakfast: 0, midMorning: 1, lunch: 2, eveningSnack: 3, dinner: 4, beforeBed: 5 };
+
+function variantIndex(slot, dayIndex, variantCount, weekSeed) {
+  const offset = SLOT_OFFSET[slot] ?? 0;
+  // Falls back gracefully (still no exact-day duplicates) even if a slot
+  // ever has a different number of options than 7.
+  const lap = Math.floor(dayIndex / variantCount);
+  return ((dayIndex % variantCount) + offset + lap + weekSeed) % variantCount;
+}
+
+function generateDayMeals(form, dayIndex, weekSeed) {
   const dietDb = MEAL_DB[form.dietPref];
   const slots = slotsForMealCount(Number(form.mealsPerDay));
   return slots.map((slot) => {
     const variants = dietDb[slot];
-    const item = variants[dayIndex % variants.length];
+    const item = variants[variantIndex(slot, dayIndex, variants.length, weekSeed)];
     return { slot, label: SLOT_LABEL[slot], time: SLOT_TIME[slot], ...item };
   });
 }
 function generateWeekPlan(form) {
-  return DAYS.map((day, i) => ({ day, meals: generateDayMeals(form, i) }));
+  // A profile-specific seed means two different people (or the same person
+  // choosing a different goal/diet) start the weekly rotation at a
+  // different point, instead of everyone always seeing the same Monday.
+  const weekSeed = hashString(`${form.dietPref}-${form.goal}-${form.age}-${form.weight}-${form.heightFt}-${form.heightIn}-${form.mealsPerDay}`) % 7;
+  return DAYS.map((day, i) => ({ day, meals: generateDayMeals(form, i, weekSeed) }));
 }
 
 /* ============================== SIGNATURE COMPONENTS ============================== */
@@ -418,7 +527,7 @@ function FactsPanel({ calories = 2150, protein = 35, carb = 45, fat = 20 }) {
   ];
   return (
     <div className="facts-panel">
-      <div className="facts-eyebrow">Daily Values <span>— Your Plate</span></div>
+      <div className="facts-eyebrow">Daily Values <span> Your Plate</span></div>
       <div className="facts-rule thick" />
       <div className="facts-cal-row">
         <span className="facts-cal-label">Calories</span>
@@ -435,7 +544,7 @@ function FactsPanel({ calories = 2150, protein = 35, carb = 45, fat = 20 }) {
         </div>
       ))}
       <div className="facts-rule thick" />
-      <p className="facts-footnote">*Illustrative split — your exact numbers are calculated after the form.</p>
+      <p className="facts-footnote">Your exact numbers are calculated after the form.</p>
     </div>
   );
 }
@@ -527,17 +636,17 @@ function Landing({ onStart, theme, setTheme }) {
   }, []);
 
   const features = [
-    { icon: Sparkles, title: "Science-Backed Numbers", body: "BMI, BMR and TDEE calculated with the Mifflin-St Jeor equation — the same standard dietitians use." },
-    { icon: Utensils, title: "A Full Week, Never Repeated", body: "Six meal slots a day, seven distinct days — built from a real Indian-forward food library." },
+    { icon: Sparkles, title: "Science-Backed Numbers", body: "BMI, BMR and TDEE calculated with the Mifflin-St Jeor equation the same standard dietitians use." },
+    { icon: Utensils, title: "A Full Week, Never Repeated", body: "Six meal slots a day, seven distinct days built from a real Indian-forward food library." },
     { icon: Activity, title: "Built Around Your Body", body: "Every gram of protein, carb and fat is tuned to your goal, activity level, and lifestyle." },
     { icon: ShieldCheck, title: "Nothing To Sign Up For", body: "No accounts, no passwords, no data stored anywhere. Close the tab and it's gone." },
   ];
   const faqs = [
-    { q: "Do I need to create an account?", a: "No. NutriPlan works instantly for every visitor — no login, no email, no OTP." },
+    { q: "Do I need to create an account?", a: "No. Nutrifly works instantly for every visitor no login, no email, no OTP." },
     { q: "Is my data stored anywhere?", a: "No. Everything is calculated in your browser for this session only and is never saved to a server." },
     { q: "What formula is used for calories?", a: "We use the Mifflin-St Jeor equation for BMR, then apply standard activity multipliers to estimate your TDEE." },
     { q: "Can I use this if I have a medical condition?", a: "We include general guidance for common conditions, but always consult a doctor or registered dietitian for medical advice." },
-    { q: "Is this app free?", a: "Completely free — no ads, no payment gateway, no subscriptions." },
+    { q: "Is this app free?", a: "Completely free no ads, no payment gateway, no subscriptions." },
   ];
   const testimonials = [
     { name: "Ananya R.", role: "Lost 6kg in 10 weeks", quote: "The weekly planner meant I never got bored — and never once ate the same dinner twice." },
@@ -550,7 +659,7 @@ function Landing({ onStart, theme, setTheme }) {
     <div className="landing-root">
       <div className="page">
         <nav className={`nav ${scrolled ? "scrolled" : ""}`}>
-          <div className="brand"><div className="brand-mark"><Leaf size={18} color="#fff" /></div><span>NutriPlan</span></div>
+          <div className="brand"><div className="brand-mark"><Leaf size={18} color="#fff" /></div><span>Nutrifly</span></div>
           <div className={`nav-links ${menuOpen ? "open" : ""}`}>
             <a href="#features" onClick={() => setMenuOpen(false)}>Features</a>
             <a href="#how" onClick={() => setMenuOpen(false)}>How it works</a>
@@ -576,15 +685,15 @@ function Landing({ onStart, theme, setTheme }) {
         <header className="hero">
           <HeroMesh />
           <div className={`hero-copy ${loaded ? "loaded" : ""}`}>
-            <div className="eyebrow"><Sparkles size={14} className="eyebrow-spark" /> Free · No sign-up · Instant results</div>
+            <div className="eyebrow"><Sparkles size={14} className="eyebrow-spark" /> Free · No signup · Instant results</div>
             <h1>Your plate,<br /><span className="hero-gradient-text">precisely planned.</span></h1>
             <p className="hero-sub">
-              Tell us your body and your goal. In seconds, NutriPlan builds a full week of meals —
+              Tell us about your body and your goal. In seconds, Nutrifly builds a full week of meals
               timed, measured, and matched to exactly how many calories and grams of protein you need.
             </p>
             <div className="hero-cta-row">
               <button className="btn btn-primary btn-lg" onClick={onStart}>Generate My Diet Plan <ArrowRight size={18} /></button>
-              <span className="hero-note">Takes under 2 minutes · No email required</span>
+              <span className="hero-note">Under 2 minutes · No email required</span>
             </div>
             <div className="hero-badges">
               <span><Check size={14} /> No login</span>
@@ -629,9 +738,9 @@ function Landing({ onStart, theme, setTheme }) {
         <Reveal as="section" className="section" id="how">
           <h2 className="section-title">Three steps to your week of meals</h2>
           <div className="steps-grid">
-            <div className="panel-card"><span className="step-num">Body</span><h3>Tell us about you</h3><p>Age, height, weight, activity level and dietary preference — four short steps.</p></div>
+            <div className="panel-card"><span className="step-num">Body</span><h3>Tell us about you</h3><p>Age, height, weight, activity level and dietary preference four short steps.</p></div>
             <div className="panel-card"><span className="step-num">Science</span><h3>We calculate your numbers</h3><p>BMI, BMR, TDEE, and precise macro targets using the Mifflin-St Jeor equation.</p></div>
-            <div className="panel-card"><span className="step-num">Plate</span><h3>Get your full week</h3><p>Seven days, six meal slots, zero repeats — with alternatives for every dish.</p></div>
+            <div className="panel-card"><span className="step-num">Plate</span><h3>Get your full week</h3><p>Seven days, six meal slots, zero repeats with alternatives for every dish.</p></div>
           </div>
         </Reveal>
 
@@ -682,9 +791,9 @@ function Landing({ onStart, theme, setTheme }) {
         </Reveal>
 
         <footer className="footer">
-          <div className="brand"><div className="brand-mark"><Leaf size={16} color="#fff" /></div><span>NutriPlan<em></em></span></div>
-          <p>Educational tool only — not a substitute for professional medical or dietary advice.</p>
-          <p className="footer-copy">© {new Date().getFullYear()} NutriPlan. Built for everyone, free of charge.</p>
+          <div className="brand"><div className="brand-mark"><Leaf size={16} color="#fff" /></div><span>Nutrifly</span></div>
+          <p>Educational tool only not a substitute for professional medical or dietary advice.</p>
+          <p className="footer-copy">© {new Date().getFullYear()} Nutrifly. Built for everyone, free of charge.</p>
         </footer>
       </div>
     </div>
@@ -867,144 +976,221 @@ function FormFlow({ onComplete, onCancel }) {
 }
 
 /* ============================== PDF GENERATION ============================== */
-function generatePDF(form, results, week) {
+function generatePDF(form, results, week, theme) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const marginX = 16;
+  const contentW = pageW - marginX * 2;
   let y = 0;
   let page = 1;
 
-  const LEAF = [53, 99, 63], CITRUS = [214, 88, 32], INK = [20, 23, 15], MUTED = [107, 112, 98], LINE = [230, 226, 211];
+  const C = THEME_PDF_COLORS[theme] || THEME_PDF_COLORS.sage;
+  const LEAF = C.leaf, CITRUS = C.citrus, BERRY = C.berry;
+  const INK = [24, 26, 20], MUTED = [107, 112, 98], LINE = [230, 226, 211], CARD_BG = [252, 251, 246];
+  const SLOT_ACCENT = {
+    breakfast: CITRUS, midMorning: CITRUS, lunch: LEAF,
+    eveningSnack: BERRY, dinner: BERRY, beforeBed: LEAF,
+  };
+  const BOTTOM_MARGIN = 16;
 
   function drawFooter() {
     doc.setFontSize(8);
     doc.setTextColor(...MUTED);
     doc.setFont("helvetica", "normal");
-    doc.text("NutriPlan - Educational tool only, not a substitute for professional medical advice.", marginX, pageH - 10);
-    doc.text(`Page ${page}`, pageW - marginX, pageH - 10, { align: "right" });
+    doc.text("Nutrifly - Educational tool only, not a substitute for professional medical advice.", marginX, pageH - 9);
+    doc.text(`Page ${page}`, pageW - marginX, pageH - 9, { align: "right" });
   }
+  // Only breaks to a new page when the next block genuinely won't fit —
+  // this is what stops days from each burning a mostly-empty page.
   function ensureSpace(h) {
-    if (y + h > pageH - 18) {
+    if (y + h > pageH - BOTTOM_MARGIN) {
       drawFooter();
       doc.addPage();
       page += 1;
-      y = 20;
+      y = 16;
     }
   }
+  function textLines(lines, x, startY, lineH, color, font, size) {
+    doc.setFont(font[0], font[1]);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    lines.forEach((line, i) => doc.text(line, x, startY + i * lineH));
+    return lines.length * lineH;
+  }
 
-  // ---- Cover / profile ----
+  /* ---------------- Cover / profile (page 1) ---------------- */
   doc.setFillColor(...LEAF);
-  doc.rect(0, 0, pageW, 34, "F");
+  doc.rect(0, 0, pageW, 32, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.text("NutriPlan", marginX, 16);
+  doc.setFontSize(21);
+  doc.text("Nutrifly", marginX, 15);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.text("Your Personalised 7-Day Diet Plan", marginX, 24);
-  doc.setFontSize(9);
-  doc.text(`Generated on ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`, marginX, 30);
+  doc.setFontSize(10.5);
+  doc.text("Your Personalised 7-Day Diet Plan", marginX, 22.5);
+  doc.setFontSize(8.5);
+  doc.text(`Generated on ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`, marginX, 28);
 
-  y = 44;
-  doc.setTextColor(...INK);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text("Your Profile", marginX, y);
-  y += 7;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(...MUTED);
+  y = 40;
   const goalLabel = form.goal === "lose" ? "Lose Weight" : form.goal === "gain" ? "Gain Weight" : "Maintain Weight";
-  doc.text(`${form.age} yrs   |   ${form.gender === "male" ? "Male" : "Female"}   |   ${formatHeight(form)}   |   ${form.weight} kg   |   Goal: ${goalLabel}`, marginX, y);
-  y += 10;
+  doc.setFillColor(...CARD_BG);
+  doc.setDrawColor(...LINE);
+  doc.roundedRect(marginX, y, contentW, 14, 2.2, 2.2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
+  doc.setTextColor(...INK);
+  doc.text(`${form.age} yrs   ·   ${form.gender === "male" ? "Male" : "Female"}   ·   ${formatHeight(form)}   ·   ${form.weight} kg`, marginX + 5, y + 6);
+  doc.setTextColor(...CITRUS);
+  doc.setFontSize(9.5);
+  doc.text(`Goal: ${goalLabel}`, marginX + 5, y + 11);
+  y += 20;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12.5);
+  doc.setTextColor(...INK);
+  doc.text("Your Daily Targets", marginX, y);
+  y += 6;
 
   const stats = [
-    ["BMI", `${results.bmi} (${results.bmiCategory})`], ["BMR", `${results.bmr} kcal`],
-    ["Daily Calories", `${results.dailyCalories} kcal`], ["Protein Target", `${results.proteinG} g`],
-    ["Carbs Target", `${results.carbG} g`], ["Fat Target", `${results.fatG} g`],
-    ["Water Intake", `${results.waterL} L`], ["Fiber Intake", `${results.fiberG} g`],
+    ["BMI", `${results.bmi} (${results.bmiCategory})`, LEAF], ["BMR", `${results.bmr} kcal`, CITRUS],
+    ["Daily Calories", `${results.dailyCalories} kcal`, BERRY], ["Protein Target", `${results.proteinG} g`, LEAF],
+    ["Carbs Target", `${results.carbG} g`, CITRUS], ["Fat Target", `${results.fatG} g`, BERRY],
+    ["Water Intake", `${results.waterL} L`, LEAF], ["Fiber Intake", `${results.fiberG} g`, CITRUS],
   ];
-  const gap = 4, cols = 4, colW = (pageW - marginX * 2 - (cols - 1) * gap) / cols, rowH = 20;
+  const gap = 3.5, cols = 4, colW = (contentW - (cols - 1) * gap) / cols, rowH = 19;
   stats.forEach((s, i) => {
     const col = i % cols, row = Math.floor(i / cols);
     const x = marginX + col * (colW + gap), yy = y + row * (rowH + gap);
-    doc.setFillColor(250, 249, 242);
+    doc.setFillColor(...CARD_BG);
     doc.setDrawColor(...LINE);
     doc.roundedRect(x, yy, colW, rowH, 2, 2, "FD");
+    doc.setFillColor(...s[2]);
+    doc.rect(x, yy, 1.3, rowH, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(10.5);
     doc.setTextColor(...INK);
-    doc.text(String(s[1]), x + 4, yy + 9);
+    doc.text(String(s[1]), x + 4.5, yy + 8.5);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7.6);
     doc.setTextColor(...MUTED);
-    doc.text(s[0], x + 4, yy + 15.5);
+    doc.text(s[0], x + 4.5, yy + 14.5);
   });
-  y += 2 * (rowH + gap) + 4;
+  y += 2 * (rowH + gap) + 3;
 
   if (results.calorieDeficit > 0 || results.calorieSurplus > 0) {
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(9);
-    doc.setTextColor(...MUTED);
     const note = results.calorieDeficit > 0
       ? `Uses a daily deficit of ~${results.calorieDeficit} kcal from a TDEE of ${results.tdee} kcal for steady weight loss.`
       : `Uses a daily surplus of ~${results.calorieSurplus} kcal above a TDEE of ${results.tdee} kcal for healthy weight gain.`;
-    const lines = doc.splitTextToSize(note, pageW - marginX * 2);
-    doc.text(lines, marginX, y);
-    y += lines.length * 4.4;
+    const lines = doc.splitTextToSize(note, contentW - 12);
+    const boxH = lines.length * 4.3 + 6;
+    doc.setFillColor(...CARD_BG);
+    doc.setDrawColor(...LINE);
+    doc.roundedRect(marginX, y, contentW, boxH, 2, 2, "FD");
+    doc.setFillColor(...CITRUS);
+    doc.rect(marginX, y, 1.3, boxH, "F");
+    textLines(lines, marginX + 5, y + 5.5, 4.3, MUTED, ["helvetica", "italic"], 8.8);
+    y += boxH + 8;
+  } else {
+    y += 6;
   }
+
+  // Weekly calorie overview — a compact bar chart, so the cover page carries
+  // real information all the way down instead of trailing off into blank
+  // space above the fold of day 1's content.
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12.5);
+  doc.setTextColor(...INK);
+  doc.text("Weekly Calorie Overview", marginX, y);
+  y += 7;
+
+  const dayTotals = week.map((d) => d.meals.reduce((s, m) => s + m.cal, 0));
+  const maxCal = Math.max(...dayTotals, 1);
+  const labelW = 24, valueW = 20, trackX = marginX + labelW, trackW = contentW - labelW - valueW;
+  const barH = 4.6, rowGap = 3.2;
+  week.forEach((d, i) => {
+    const rowY = y + i * (barH + rowGap);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...INK);
+    doc.text(d.day.slice(0, 3), marginX, rowY + barH - 0.8);
+    doc.setFillColor(240, 237, 227);
+    doc.roundedRect(trackX, rowY, trackW, barH, 1.2, 1.2, "F");
+    const w = Math.max((dayTotals[i] / maxCal) * trackW, 4);
+    doc.setFillColor(...(i % 2 === 0 ? LEAF : CITRUS));
+    doc.roundedRect(trackX, rowY, w, barH, 1.2, 1.2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text(`${dayTotals[i]} kcal`, trackX + trackW + valueW - 2, rowY + barH - 0.8, { align: "right" });
+  });
+  y += 7 * (barH + rowGap) + 2;
   drawFooter();
 
-  // ---- Each day ----
-  week.forEach((d) => {
-    doc.addPage(); page += 1; y = 20;
-    doc.setFillColor(...CITRUS);
-    doc.rect(0, 0, pageW, 16, "F");
+  /* ---------------- Meal cards, flowing continuously (no forced page-per-day) ---------------- */
+  week.forEach((d, dayIdx) => {
+    const dayTotal = dayTotals[dayIdx];
+    ensureSpace(45); // keep the day header attached to at least its first card
+    doc.setFillColor(...LEAF);
+    doc.roundedRect(marginX, y, contentW, 11, 2, 2, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.text(`${d.day} - Meal Plan`, marginX, 11);
-    y = 26;
+    doc.setFontSize(11.5);
+    doc.text(d.day, marginX + 5, y + 7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.text(`Day ${dayIdx + 1} of 7   ·   ~${dayTotal} kcal`, pageW - marginX - 5, y + 7.5, { align: "right" });
+    y += 11 + 4;
 
     d.meals.forEach((m) => {
-      ensureSpace(36);
+      const padX = 5, padTop = 4.5, padBottom = 4.5;
+      const textW = contentW - padX * 2;
+      const altLines = doc.splitTextToSize(`Alternative: ${m.alt}`, textW);
+      const reasonLines = doc.splitTextToSize(m.reason, textW);
+      const lineHeader = 5.6, lineName = 6, lineQty = 5.2, altLH = 4.1, gapAR = 1.6, reasonLH = 3.9;
+      const cardH = padTop + lineHeader + lineName + lineQty + altLines.length * altLH + gapAR + reasonLines.length * reasonLH + padBottom;
+
+      ensureSpace(cardH + 4);
+      doc.setFillColor(...CARD_BG);
+      doc.setDrawColor(...LINE);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(marginX, y, contentW, cardH, 2.2, 2.2, "FD");
+      doc.setFillColor(...(SLOT_ACCENT[m.slot] || LEAF));
+      doc.rect(marginX + 0.6, y + 1.2, 2.2, cardH - 2.4, "F");
+
+      let ty = y + padTop + 2;
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10.5);
-      doc.setTextColor(...MUTED);
-      doc.text(`${m.label}   |   ${m.time}`, marginX, y);
-      doc.setTextColor(...CITRUS);
-      doc.text(`${m.cal} kcal`, pageW - marginX, y, { align: "right" });
-      y += 6;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(...INK);
-      doc.text(m.name, marginX, y);
-      y += 5.5;
-      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(...MUTED);
-      doc.text(`${m.qty}   |   P ${m.p}g   C ${m.c}g   F ${m.f}g   Fiber ${m.fiber}g`, marginX, y);
-      y += 5.5;
-      const altLines = doc.splitTextToSize(`Alternative: ${m.alt}`, pageW - marginX * 2);
+      doc.text(`${m.label.toUpperCase()}  ·  ${m.time}`, marginX + padX, ty);
+      doc.setTextColor(...CITRUS);
+      doc.text(`${m.cal} kcal`, marginX + contentW - padX, ty, { align: "right" });
+
+      ty += lineHeader;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11.5);
       doc.setTextColor(...INK);
-      doc.text(altLines, marginX, y);
-      y += altLines.length * 4.4;
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(8.5);
+      doc.text(m.name, marginX + padX, ty);
+
+      ty += lineName;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.6);
       doc.setTextColor(...MUTED);
-      const reasonLines = doc.splitTextToSize(m.reason, pageW - marginX * 2);
-      doc.text(reasonLines, marginX, y);
-      y += reasonLines.length * 4.1 + 4;
-      doc.setDrawColor(...LINE);
-      doc.line(marginX, y, pageW - marginX, y);
-      y += 6;
+      doc.text(`${m.qty}  ·  P ${m.p}g   C ${m.c}g   F ${m.f}g   Fiber ${m.fiber}g`, marginX + padX, ty);
+
+      ty += lineQty;
+      ty += textLines(altLines, marginX + padX, ty, altLH, INK, ["helvetica", "normal"], 8.6);
+
+      ty += gapAR;
+      textLines(reasonLines, marginX + padX, ty, reasonLH, MUTED, ["helvetica", "italic"], 8);
+
+      y += cardH + 4;
     });
-    drawFooter();
   });
+  drawFooter();
 
   const fileSafeDate = new Date().toISOString().slice(0, 10);
-  doc.save(`NutriPlan-Diet-Plan-${fileSafeDate}.pdf`);
+  doc.save(`NutriPlan-AI-Diet-Plan-${fileSafeDate}.pdf`);
 }
 
 /* ============================== DASHBOARD ============================== */
@@ -1031,7 +1217,7 @@ function Dashboard({ form, onReset, theme, setTheme }) {
     // Defer so the loading state paints before the (synchronous) PDF build runs.
     setTimeout(() => {
       try {
-        generatePDF(form, results, week);
+        generatePDF(form, results, week, theme);
         setToast("Your PDF is downloading…");
       } catch (err) {
         console.error("PDF generation failed:", err);
@@ -1042,15 +1228,15 @@ function Dashboard({ form, onReset, theme, setTheme }) {
     }, 30);
   }
   function handleShare() {
-    const summary = `NutriPlan — My Daily Targets\nCalories: ${results.dailyCalories} kcal\nProtein: ${results.proteinG}g | Carbs: ${results.carbG}g | Fat: ${results.fatG}g\nBMI: ${results.bmi} (${results.bmiCategory})`;
-    if (navigator.share) { navigator.share({ title: "My NutriPlan Diet Plan", text: summary }).catch(() => { }); }
+    const summary = `Nutrifly — My Daily Targets\nCalories: ${results.dailyCalories} kcal\nProtein: ${results.proteinG}g | Carbs: ${results.carbG}g | Fat: ${results.fatG}g\nBMI: ${results.bmi} (${results.bmiCategory})`;
+    if (navigator.share) { navigator.share({ title: "My Nutrifly Diet Plan", text: summary }).catch(() => { }); }
     else if (navigator.clipboard) { navigator.clipboard.writeText(summary); setToast("Summary copied to clipboard"); }
   }
 
   return (
     <div className="page dashboard-page">
       <nav className="nav no-print">
-        <div className="brand"><div className="brand-mark"><Leaf size={18} color="#fff" /></div><span>NutriPlan <em></em></span></div>
+        <div className="brand"><div className="brand-mark"><Leaf size={18} color="#fff" /></div><span>Nutrifly</span></div>
         <div className="nav-actions">
           <ThemeSwitcher theme={theme} setTheme={setTheme} />
           <button className="btn btn-ghost btn-sm" onClick={handleDownloadPdf} disabled={pdfLoading}>
