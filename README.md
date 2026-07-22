@@ -97,8 +97,8 @@ The calculated calorie target is then used to generate a balanced **7-day person
 
 - Shivam Singh
 - Sameer Vajir Khan
-- Sairaj
-- Karan
+- Abhishek More
+- Shweta Chavan
 
 ---
 
